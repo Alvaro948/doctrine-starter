@@ -1,0 +1,45 @@
+#!/usr/bin/env php
+<?php
+
+declare(strict_types=1);
+
+use Doctrine\DBAL\DriverManager;
+use Doctrine\DBAL\Platforms\PostgreSQLPlatform;
+use Doctrine\ORM\Configuration;
+use Doctrine\ORM\EntityManager;
+use Doctrine\ORM\Mapping\ClassMetadata;
+use Doctrine\ORM\Mapping\Driver\AttributeDriver;
+use Doctrine\ORM\Tools\Console\ConsoleRunner;
+use Doctrine\ORM\Tools\Console\EntityManagerProvider\SingleManagerProvider;
+
+$autoloadFiles = [
+    __DIR__ . '/../vendor/autoload.php',
+    __DIR__ . '/../../../autoload.php',
+];
+
+foreach ($autoloadFiles as $autoloadFile) {
+    if (file_exists($autoloadFile)) {
+        require_once $autoloadFile;
+
+        break;
+    }
+}
+
+$config = new Configuration();
+$config->setMetadataDriverImpl(new AttributeDriver([__DIR__ . '/../src/Entities']));
+$config->setIdentityGenerationPreferences([PostgreSQLPlatform::class => ClassMetadata::GENERATOR_TYPE_SEQUENCE]);
+$config->setProxyNamespace('DoctrineProxies');
+$config->setProxyDir(__DIR__ . '/../var/doctrine/proxies');
+$config->setAutoGenerateProxyClasses(false);
+
+$connection = DriverManager::getConnection([
+    'driver' => 'pdo_pgsql',
+    'user' => getenv('DATABASE_USERNAME'),
+    'password' => getenv('DATABASE_PASSWORD'),
+    'host' => getenv('DATABASE_HOST'),
+    'port' => getenv('DATABASE_PORT'),
+    'dbname' => getenv('DATABASE_DATABASE'),
+    'charset' => 'UTF8',
+], $config);
+
+ConsoleRunner::run(new SingleManagerProvider(new EntityManager($connection, $config)));
